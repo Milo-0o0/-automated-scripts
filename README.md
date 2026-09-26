@@ -13,7 +13,7 @@ Load it via the Tampermonkey script in your browser.
 Load it via the Tampermonkey script in your browser.
 
 
-# VSCodeCommentsExtension.rar
+# CodeCommentsV2.2.rar
 ## 1. function
 - Code comments are stored separately in JSON files and will no longer pollute files such as .cpp/.c/.h.
 ## 2. use

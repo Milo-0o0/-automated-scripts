@@ -1,0 +1,70 @@
+// ==UserScript==
+// @name         Douyin - No Autoplay When Seeking
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Preserve the original paused state when dragging the progress bar
+// @match        *://www.douyin.com/*
+// @match        *://douyin.com/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    function highlightTitles() {
+        const selectors = [
+            '[data-e2e="video-title"]',
+            '[data-e2e="article-title"]',
+            '.video-title',
+            '.article-title'
+        ];
+        const titles = document.querySelectorAll(selectors.join(','));
+        titles.forEach(el => {
+            if (el.dataset.highlighted === 'true') return;
+            const hue = Math.floor(Math.random() * 360);
+            const sat = 70 + Math.floor(Math.random() * 30);
+            const lig = 60 + Math.floor(Math.random() * 30);
+            el.style.backgroundColor = `hsl(${hue}, ${sat}%, ${lig}%)`;
+            el.style.padding = '2px 6px';
+            el.style.borderRadius = '4px';
+            el.style.display = 'inline-block';
+            el.dataset.highlighted = 'true';
+        });
+    }
+
+    highlightTitles();
+
+    const observer = new MutationObserver(() => highlightTitles());
+    observer.observe(document.body, { childList: true, subtree: true });
+    setInterval(highlightTitles, 3000);
+
+    const videoStateMap = new WeakMap();
+
+    function handleVideo(video) {
+        if (video.dataset.dyDragFixed) return;
+        video.dataset.dyDragFixed = 'true';
+
+        video.addEventListener('seeking', function() {
+            videoStateMap.set(this, this.paused);
+        });
+
+        video.addEventListener('seeked', function() {
+            const wasPaused = videoStateMap.get(this);
+            if (wasPaused === true) {
+                this.pause();
+            }
+            videoStateMap.delete(this);
+        });
+    }
+
+    function initAllVideos() {
+        document.querySelectorAll('video').forEach(handleVideo);
+    }
+
+    const videoObserver = new MutationObserver(() => initAllVideos());
+    videoObserver.observe(document.body, { childList: true, subtree: true });
+    initAllVideos();
+    setInterval(initAllVideos, 3000);
+
+    console.log('✅ Seek autoplay blocker started');
+})();

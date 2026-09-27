@@ -1,0 +1,34 @@
+// ==UserScript==
+// @name         Bilibili Bottom-Right Triangle [Precise Root-Killer Lock-Down Edition]
+// @namespace    http://tampermonkey.net/
+// @version      22.0
+// @match        *://www.bilibili.com/*
+// @match        *://bilibili.com/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    function blockTheContainer() {
+        // Inject a CSS nuke directly to lock down the parent container you found
+        const style = document.createElement('style');
+        style.id = 'bili-root-killer';
+        style.textContent = `
+            .bpx-player-video-area .bpx-player-state-wrap {
+                display: none !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Take effect immediately
+    blockTheContainer();
+
+    // Even if Bilibili refreshes the control bar, we re-lay this blocking net every 1.5 seconds
+    setInterval(blockTheContainer, 1500);
+
+    console.log('✅ Ultimate root-killer lock-down edition is live! This state wrapper will never be able to render.');
+})();

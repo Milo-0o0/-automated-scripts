@@ -1,0 +1,72 @@
+// ==UserScript==
+// @name         Douyin - Remove Pause Icon
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Remove the play button shown while paused
+// @match        *://www.douyin.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    function removePauseIcon(video) {
+        // The overlay lives next to the <video>, so scope the search to the
+        // parent element instead of the whole document. This keeps the script
+        // from touching paused players elsewhere on the page.
+        const wrap = video.parentElement;
+        if (!wrap) return;
+
+        // Douyin has shipped the pause overlay under several different class
+        // names over time, and the built players differ by surface, so all known
+        // variants are tried at once. Add new selectors here after a frontend
+        // redesign changes the naming.
+        const selectors = [
+            '.xgplayer-start',
+            '.xgplayer-controls-pause',
+            '[data-e2e="video-pause-icon"]',
+            '[class*="pause-icon"]',
+            '[class*="play-btn"]',
+            '[class*="pause-btn"]'
+        ];
+        selectors.forEach(sel => {
+            wrap.querySelectorAll(sel).forEach(el => {
+                // Guard against removing the player itself: a broad class match
+                // can hit an ancestor that still contains the video.
+                if (el !== video && !el.contains(video)) {
+                    el.remove();
+                }
+            });
+        });
+    }
+
+    function setupVideo(video) {
+        // Dataset flag prevents duplicate listeners on the same element, since
+        // init runs on every DOM mutation.
+        if (video.dataset._clean) return;
+        video.dataset._clean = 'true';
+
+        // Main path: the overlay is rendered by the player when you pause, so
+        // delete it the instant the pause event fires.
+        video.addEventListener('pause', function () {
+            removePauseIcon(this);
+        });
+
+        // Edge case: the page can already be paused when the script first sees
+        // this video. A short delay lets the player finish painting its overlay
+        // before we remove it.
+        if (video.paused) {
+            setTimeout(() => removePauseIcon(video), 100);
+        }
+    }
+
+    function init() {
+        document.querySelectorAll('video').forEach(setupVideo);
+    }
+
+    // Douyin mounts a fresh <video> per feed card, so re-scan on every subtree
+    // insertion. setupVideo returns immediately for elements already hooked.
+    const observer = new MutationObserver(init);
+    observer.observe(document.body, { childList: true, subtree: true });
+    init();
+})();

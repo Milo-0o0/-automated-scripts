@@ -1,0 +1,60 @@
+// ==UserScript==
+// @name         Douyin - No Autoplay When Seeking
+// @namespace    http://tampermonkey.net/
+// @version      1.1
+// @description  Preserve the original paused state when dragging the progress bar. v1.1: the unrelated random title-highlighting code has been removed.
+// @match        *://www.douyin.com/*
+// @match        *://douyin.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // Maps a <video> element to the paused flag captured at the moment the
+    // seek began. A WeakMap lets the entry be collected together with the
+    // video node, so nothing has to be cleaned up when Douyin disposes of a
+    // player while you scroll the feed.
+    const videoStateMap = new WeakMap();
+
+    function handleVideo(video) {
+        // Dataset flag guarantees exactly one listener pair per element,
+        // added at most once even though init runs repeatedly.
+        if (video.dataset.dyDragFixed) return;
+        video.dataset.dyDragFixed = 'true';
+
+        // Seeking starts: record whether the user was already paused.
+        video.addEventListener('seeking', function () {
+            videoStateMap.set(this, this.paused);
+        });
+
+        // Seek finished: restore pause only if the video was paused before the
+        // drag. If it was playing, this does nothing and playback continues.
+        video.addEventListener('seeked', function () {
+            const wasPaused = videoStateMap.get(this);
+            if (wasPaused === true) {
+                this.pause();
+            }
+            videoStateMap.delete(this);
+        });
+    }
+
+    function initAllVideos() {
+        document.querySelectorAll('video').forEach(handleVideo);
+    }
+
+    // Douyin mounts a fresh <video> for every card in the feed, so hook every
+    // subtree insertion.
+    const videoObserver = new MutationObserver(() => initAllVideos());
+    videoObserver.observe(document.body, { childList: true, subtree: true });
+
+    // First pass over the video elements already in the DOM.
+    initAllVideos();
+
+    // Safety net for players added without a mutation the observer catches
+    // (e.g. nodes being reused). Cheap, because handleVideo returns
+    // immediately for elements that are already hooked.
+    setInterval(initAllVideos, 3000);
+
+    console.log('✅ Seek autoplay blocker started');
+})();

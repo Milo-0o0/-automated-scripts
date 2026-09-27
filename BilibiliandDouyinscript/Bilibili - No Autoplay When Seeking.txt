@@ -1,0 +1,59 @@
+// ==UserScript==
+// @name         Bilibili - No Autoplay When Seeking While Paused
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Only blocks autoplay when dragging the progress bar; no highlighting, no polling
+// @author       You
+// @match        *://www.bilibili.com/*
+// @match        *://bilibili.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // Captures the paused flag per <video> element for the duration of one seek.
+    // A WeakMap means the entry disappears with the player itself, so no cleanup
+    // is needed when Bilibili replaces the video element on page navigation.
+    const stateMap = new WeakMap();
+
+    function handleVideo(video) {
+        // Dataset flag keeps the listener pair from being attached twice to the
+        // same element, which would otherwise pause the video redundantly.
+        if (video.dataset._dragFixed) return;
+        video.dataset._dragFixed = 'true';
+
+        // Seeking starts: remember whether the user was already paused.
+        video.addEventListener('seeking', function () {
+            stateMap.set(this, this.paused);
+        });
+
+        // Seek finished: restore pause only if the video was paused before the
+        // drag. A video that was playing is left untouched, so normal scrubbing
+        // during playback keeps playing.
+        video.addEventListener('seeked', function () {
+            const wasPaused = stateMap.get(this);
+            if (wasPaused === true) {
+                this.pause();
+            }
+            stateMap.delete(this);
+        });
+    }
+
+    function init() {
+        document.querySelectorAll('video').forEach(handleVideo);
+    }
+
+    // Only watch newly added video elements, throttled with requestAnimationFrame.
+    // The frame callback coalesces bursts of DOM mutations (Bilibili preloading
+    // several players in one go) into a single scan per frame.
+    const observer = new MutationObserver(() => {
+        requestAnimationFrame(init);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Run once immediately
+    init();
+
+    console.log('✅ Bilibili seek autoplay blocker started (clean version)');
+})();

@@ -4,8 +4,19 @@
 
 ② Open the built‑in GitHub Copilot Chat panel. Click the `auto` button at the bottom to bring up the menu. Expand the dropdown list to show available DeepSeek models. Click the gear icon next to **DeepSeek V4 Flash** to open its settings page.
 
-③ On the settings page, click the gear icon beside **DeepSeek V4 Flash**. VS Code will automatically open the `chatLanguageModels.json` configuration file. You may review the DeepSeek configuration and save the file.
-
+③ On the settings page, click the gear icon beside **DeepSeek V4 Flash**. VS Code will automatically open the `chatLanguageModels.json` configuration file and add this code. You may review the DeepSeek configuration and save the file.
+`	{
+		"name": "DeepSeek",
+		"vendor": "deepseek",
+		"settings": {
+			"deepseek-v4-flash": {}
+		},
+		"settings": {
+				"deepseek-v4-flash": {
+					"reasoningEffort": "high"
+				}
+			}
+	}`
 File path:
 `C:\Users\云上之人_青衣\AppData\Roaming\Code\User\chatLanguageModels.json`
 

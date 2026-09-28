@@ -1,0 +1,170 @@
+<view class="container">
+  <view class="card">
+    <view class="card-title">蓝牙设置</view>
+    
+    <view class="form-row">
+      <text class="label">蓝牙状态</text>
+      <view class="status-wrap">
+        <view class="status-dot {{isBluetoothOpen ? 'status-on' : 'status-off'}}"></view>
+        <text class="status-text">{{isBluetoothOpen ? '已开启' : '未开启'}}</text>
+      </view>
+      <button class="btn-small {{isBluetoothOpen ? 'btn-danger' : 'btn-success'}}" bindtap="toggleBluetooth">
+        {{isBluetoothOpen ? '关闭扫描' : '开始扫描'}}
+      </button>
+    </view>
+
+    <view class="form-row" wx:if="{{isBluetoothOpen}}">
+      <text class="label">选择设备</text>
+      <picker class="picker" mode="selector" range="{{deviceList}}" range-key="name" value="{{selectedDeviceIndex}}" bindchange="onDeviceChange" disabled="{{isConnected}}">
+        <view class="picker-value {{selectedDeviceIndex === -1 ? 'placeholder' : ''}}">
+          {{selectedDeviceIndex === -1 ? '请选择设备' : deviceList[selectedDeviceIndex].name}}
+        </view>
+      </picker>
+      <text class="scan-status">{{isScanning ? '扫描中...' : '已停止'}}</text>
+    </view>
+
+    <view class="form-row" wx:if="{{isBluetoothOpen && selectedDeviceIndex > -1 && !isConnected}}">
+      <text class="label">操作</text>
+      <button class="btn-small btn-success" bindtap="toggleConnect">连接设备</button>
+      <text class="tip-text">点击后留意系统配对提示</text>
+    </view>
+
+    <view class="form-row" wx:if="{{isConnected}}">
+      <text class="label">服务UUID</text>
+      <picker class="picker" mode="selector" range="{{serviceList}}" range-key="uuid" value="{{selectedServiceIndex}}" bindchange="onServiceChange">
+        <view class="picker-value">{{serviceList[selectedServiceIndex].uuid}}</view>
+      </picker>
+    </view>
+
+    <view class="form-row" wx:if="{{isConnected && selectedServiceIndex > -1}}">
+      <text class="label">特征UUID</text>
+      <picker class="picker" mode="selector" range="{{characteristicList}}" range-key="uuid" value="{{selectedCharacteristicIndex}}" bindchange="onCharacteristicChange">
+        <view class="picker-value">{{characteristicList[selectedCharacteristicIndex].uuid}}</view>
+      </picker>
+    </view>
+
+    <view class="form-row">
+      <text class="label">连接状态</text>
+      <view class="status-wrap">
+        <view class="status-dot {{isConnected ? 'status-on' : 'status-off'}}"></view>
+        <text class="status-text">{{isConnected ? '已连接' : '未连接'}}</text>
+      </view>
+      <button class="btn-small btn-danger" bindtap="toggleConnect" disabled="{{!isConnected}}">
+        断开连接
+      </button>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="area-header">
+      <text class="area-title">接收缓冲区</text>
+      <view class="area-tools">
+        <button class="btn-small" bindtap="clearRx">清空</button>
+      </view>
+    </view>
+    <view class="area-options">
+      <view class="option-item">
+        <label class="checkbox-label">
+          <checkbox checked="{{rxTimestamp}}" bindtap="toggleRxTimestamp" color="#00b42a" />
+          <text>时间戳</text>
+        </label>
+      </view>
+      <view class="option-item">
+        <text class="option-label">编码选择</text>
+        <picker mode="selector" range="{{encodeOptions}}" value="{{rxEncodeIndex}}" bindchange="onRxEncodeChange">
+          <view class="picker-inline-box">
+            <text class="picker-inline-text">{{encodeOptions[rxEncodeIndex]}}</text>
+            <text class="picker-arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+      <view class="option-item">
+        <label class="checkbox-label">
+          <checkbox checked="{{autoWrap}}" bindtap="toggleAutoWrap" color="#00b42a" />
+          <text>自动换行</text>
+        </label>
+      </view>
+    </view>
+    <scroll-view class="data-area scroll-area" scroll-y>
+      <rich-text nodes="{{rxNodes}}"></rich-text>
+    </scroll-view>
+  </view>
+
+  <view class="card">
+    <view class="area-header">
+      <text class="area-title">发送数据</text>
+      <view class="area-tools">
+        <button class="btn-small btn-success" bindtap="togglePackages">
+          {{showPackages ? '收起包' : '管理包'}}
+        </button>
+      </view>
+    </view>
+    
+    <view class="send-main">
+      <textarea class="send-textarea" value="{{sendContent}}" bindinput="onSendContentChange" placeholder="输入要发送的数据..." />
+      <view class="send-options">
+        <view class="option-item">
+          <text class="option-label">编码选择</text>
+          <picker mode="selector" range="{{encodeOptions}}" value="{{sendEncodeIndex}}" bindchange="onSendEncodeChange">
+            <view class="picker-inline-box">
+              <text class="picker-inline-text">{{encodeOptions[sendEncodeIndex]}}</text>
+              <text class="picker-arrow">▼</text>
+            </view>
+          </picker>
+        </view>
+        <view class="option-item">
+          <label class="checkbox-label">
+            <checkbox checked="{{sendTimestamp}}" bindtap="toggleSendTimestamp" color="#00b42a" />
+            <text>时间戳</text>
+          </label>
+        </view>
+        <view class="option-item">
+          <label class="checkbox-label">
+            <checkbox checked="{{sendTimer}}" bindtap="toggleSendTimer" color="#00b42a" />
+            <text>定时发送</text>
+          </label>
+          <input class="timer-input" type="number" value="{{sendInterval}}" bindinput="onSendIntervalChange" placeholder="周期(ms)" />
+        </view>
+      </view>
+      <button class="btn-primary btn-full {{sendTimerActive ? 'btn-warning' : ''}}" bindtap="sendData">
+        {{sendTimerActive ? '停止发送' : '发送'}}
+      </button>
+    </view>
+
+    <view class="packages-section" wx:if="{{showPackages}}">
+      <view class="package-header-row">
+        <text class="package-label">预制包列表</text>
+        <button class="btn-mini btn-success" bindtap="addPackage">+ 添加</button>
+        <button class="btn-mini" bindtap="sendCheckedPackages">发送勾选</button>
+      </view>
+      <view class="package-options-row">
+        <label class="checkbox-label">
+          <checkbox checked="{{packageTimer}}" bindtap="togglePackageTimer" color="#00b42a" />
+          <text>定时发送</text>
+        </label>
+        <input class="timer-input" type="number" value="{{packageInterval}}" bindinput="onPackageIntervalChange" placeholder="周期(ms)" />
+        <button class="btn-mini {{packageTimerActive ? 'btn-warning' : 'btn-success'}}" bindtap="togglePackageTimerActive">
+          {{packageTimerActive ? '停止' : '启动'}}
+        </button>
+      </view>
+      <view class="package-list">
+        <view class="package-item" wx:for="{{packageList}}" wx:key="id">
+          <view class="package-row">
+            <text class="package-num">包{{item.id}}</text>
+            <checkbox checked="{{item.checked}}" bindtap="togglePackageChecked" data-id="{{item.id}}" color="#00b42a" />
+            <button class="btn-mini" bindtap="removePackage" data-id="{{item.id}}" wx:if="{{packageList.length > 1}}">删</button>
+          </view>
+          <input class="package-input" value="{{item.content}}" bindinput="onPackageContentChange" data-id="{{item.id}}" placeholder="输入数据..." />
+          <view class="package-options">
+            <picker mode="selector" range="{{encodeOptions}}" value="{{item.encodeIndex}}" bindchange="onPackageEncodeChange" data-id="{{item.id}}">
+              <view class="picker-inline-sm">{{encodeOptions[item.encodeIndex]}}</view>
+            </picker>
+            <button class="btn-package-send btn-primary" bindtap="sendDataById" data-id="{{item.id}}" disabled="{{!item.content}}">
+              发送
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
